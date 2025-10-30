@@ -43,9 +43,12 @@ jobs:
           docker run -d --name wordpress-app -p 80:80 --link wordpress-db:mysql -v wordpress-cicd-demo_wp_data:/var/www/html happycharlie2025/wordpress-app:latest
 
     - name: Test deployment
+      env:
+        EC2_HOST: ${{ secrets.EC2_HOST }}
       run: |
+        echo "Testing deployment on http://$EC2_HOST ..."
         sleep 10
-        curl -f http://$EC2_HOST || exit 1
+        curl -f http://$EC2_HOST || (echo "❌ Deployment test failed" && exit 1)
 
     - name: Send email notification
       uses: dawidd6/action-send-mail@v3
