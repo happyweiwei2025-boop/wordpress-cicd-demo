@@ -3,3 +3,4 @@
 # Test CI/CD run
 # Trigger after adding EC2_SSH_KEY
 # Retest after EC2_HOST fix
+# fix EC2_HOST env
