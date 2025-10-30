@@ -1,0 +1,60 @@
+name: WordPress CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: happycharlie2025
+        password: ${{ secrets.HAPPYCHARLIE2025 }}
+
+    - name: Build Docker images
+      run: |
+        docker build -t happycharlie2025/wordpress-app:latest ./wordpress
+        docker build -t happycharlie2025/wordpress-db:latest ./db
+
+    - name: Push Docker images
+      run: |
+        docker push happycharlie2025/wordpress-app:latest
+        docker push happycharlie2025/wordpress-db:latest
+
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@v0.1.6
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ec2-user
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          docker rm -f wordpress-app wordpress-db || true
+          docker pull happycharlie2025/wordpress-app:latest
+          docker pull happycharlie2025/wordpress-db:latest
+          docker run -d --name wordpress-db -e MYSQL_ROOT_PASSWORD=root -v wordpress-cicd-demo_db_data:/var/lib/mysql mysql:8
+          docker run -d --name wordpress-app -p 80:80 --link wordpress-db:mysql -v wordpress-cicd-demo_wp_data:/var/www/html happycharlie2025/wordpress-app:latest
+
+    - name: Test deployment
+      run: |
+        sleep 10
+        curl -f http://$EC2_HOST || exit 1
+
+    - name: Send email notification
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 465
+        username: php999asp@gmail.com
+        password: ${{ secrets.EMAIL_PASSWORD }}
+        subject: "WordPress CI/CD Deployment Status"
+        body: "Deployment completed successfully!"
+        to: happyweiwei2025@gmail.com
+        from: "CI Bot <php999asp@gmail.com>"
